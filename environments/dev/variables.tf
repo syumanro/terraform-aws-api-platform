@@ -46,3 +46,23 @@ variable "private_cache_subnet_cidrs" {
   description = "CIDR blocks for the private cache subnets."
   type        = list(string)
 }
+
+# variable "alb_certificate_arn" {
+#   description = "ARN of the ACM certificate used by the ALB HTTPS listener."
+#   type        = string
+# }
+
+variable "desired_count" {
+  description = "Desired number of ECS tasks."
+  type        = number
+}
+
+variable "health_check_grace_period_seconds" {
+  description = "Time that ECS ignores unhealthy load balancer health checks after task startup."
+  type        = number
+}
+
+variable "task_definition_arn" {
+  description = "ARN of the ECS task definition managed by CI/CD."
+  type        = string
+}
