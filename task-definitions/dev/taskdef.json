@@ -1,0 +1,57 @@
+{
+  "family": "api-platform-dev-app",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "networkMode": "awsvpc",
+
+  "cpu": "256",
+  "memory": "512",
+
+  "volumes": [
+    {
+      "name": "api-platform-dev-app-volume",
+      "host": {}
+    }
+  ],
+
+  "executionRoleArn": "arn:aws:iam::043300555595:role/api-platform-dev-ecs-task-execution-role-ecs",
+  "taskRoleArn": "arn:aws:iam::043300555595:role/api-platform-dev-ecs-task-role-ecs",
+
+  "containerDefinitions": [
+    {
+      "name": "app",
+      "image": "<IMAGE1_NAME>",
+
+      "cpu": 256,
+      "memoryReservation": 512,
+
+      "essential": true,
+
+      "mountPoints": [
+        {
+          "sourceVolume": "api-platform-dev-app-volume",
+          "containerPath": "/usr/local/apache2/logs",
+          "readOnly": false
+        }
+      ],
+
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-region": "ap-northeast-1",
+          "awslogs-group": "/ecs/api-platform-dev-app",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+
+      "portMappings": [
+        {
+          "hostPort": 8080,
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ]
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------------
 
 resource "aws_iam_role" "task_execution" {
-  name = "${var.project_name}-${var.environment}-ecs-task-execution-role"
+  name = "${var.project_name}-${var.environment}-ecs-task-execution-role-ecs"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -21,7 +21,7 @@ resource "aws_iam_role" "task_execution" {
   tags = merge(
     var.common_tags,
     {
-      Name = "${var.project_name}-${var.environment}-ecs-task-execution-role"
+      Name = "${var.project_name}-${var.environment}-ecs-task-execution-role-ecs"
     }
   )
 }
@@ -36,7 +36,7 @@ resource "aws_iam_role_policy_attachment" "task_execution" {
 # -----------------------------------------------------------------------------
 
 resource "aws_iam_role" "task" {
-  name = "${var.project_name}-${var.environment}-ecs-task-role"
+  name = "${var.project_name}-${var.environment}-ecs-task-role-ecs"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -54,7 +54,7 @@ resource "aws_iam_role" "task" {
   tags = merge(
     var.common_tags,
     {
-      Name = "${var.project_name}-${var.environment}-ecs-task-role"
+      Name = "${var.project_name}-${var.environment}-ecs-task-role-ecs"
     }
   )
 }

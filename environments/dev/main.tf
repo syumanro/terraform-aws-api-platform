@@ -67,3 +67,41 @@ module "ecs" {
   desired_count                     = var.desired_count
   health_check_grace_period_seconds = var.health_check_grace_period_seconds
 }
+
+# -----------------------------------------------------------------------------
+# Aurora Module
+# -----------------------------------------------------------------------------
+
+module "aurora" {
+  source = "../../modules/aurora"
+
+  project_name = var.project_name
+  environment  = var.environment
+  common_tags  = local.common_tags
+
+  private_db_subnet_ids    = module.network.private_db_subnet_ids
+  aurora_security_group_id = module.network.aurora_security_group_id
+
+  database_name   = var.database_name
+  master_username = var.database_master_username
+  master_password = var.database_master_password
+  instance_class  = var.aurora_instance_class
+}
+
+# -----------------------------------------------------------------------------
+# Redis Module
+# -----------------------------------------------------------------------------
+
+module "redis" {
+  source = "../../modules/redis"
+
+  project_name = var.project_name
+  environment  = var.environment
+  common_tags  = local.common_tags
+
+  private_cache_subnet_ids = module.network.private_cache_subnet_ids
+  redis_security_group_id  = module.network.redis_security_group_id
+
+  node_type      = var.redis_node_type
+  engine_version = var.redis_engine_version
+}

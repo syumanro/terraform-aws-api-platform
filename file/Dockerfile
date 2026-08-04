@@ -1,0 +1,1 @@
+FROM zhu-dev-xxx-cicd:latest

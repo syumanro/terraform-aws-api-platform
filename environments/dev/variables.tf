@@ -66,3 +66,43 @@ variable "task_definition_arn" {
   description = "ARN of the ECS task definition managed by CI/CD."
   type        = string
 }
+
+# -----------------------------------------------------------------------------
+# Aurora Variables
+# -----------------------------------------------------------------------------
+
+variable "database_name" {
+  description = "Name of the initial Aurora database."
+  type        = string
+}
+
+variable "database_master_username" {
+  description = "Master username for the Aurora cluster."
+  type        = string
+  sensitive   = true
+}
+
+variable "database_master_password" {
+  description = "Master password for the Aurora cluster."
+  type        = string
+  sensitive   = true
+}
+
+variable "aurora_instance_class" {
+  description = "Instance class used by Aurora cluster instances."
+  type        = string
+}
+
+# -----------------------------------------------------------------------------
+# Redis Variables
+# -----------------------------------------------------------------------------
+
+variable "redis_node_type" {
+  description = "Node type used by the ElastiCache replication group."
+  type        = string
+}
+
+variable "redis_engine_version" {
+  description = "Valkey engine version used by the ElastiCache replication group."
+  type        = string
+}

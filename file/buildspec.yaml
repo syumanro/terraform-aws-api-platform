@@ -1,0 +1,55 @@
+version: 0.2
+
+# env:
+#   shell: bash
+#   variables:
+#     # Configure this value in the CodeBuild project or CodePipeline.
+#     ECR_REPOSITORY_NAME: "zhu-dev-app"
+#     CONTAINER_NAME: "app"
+
+phases:
+  install:
+    runtime-versions:
+      php: 8.2
+
+    pre_build:
+      commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws --version
+      - git --version
+      - php -v
+      - grep -i "ST" hashnum.text
+      - HASH_NUM=$(grep -i "ST" hashnum.text) 
+      - aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 043300555595.dkr.ecr.ap-northeast-1.amazonaws.com
+      - docker pull 043300555595.dkr.ecr.ap-northeast-1.amazonaws.com/api-platform-dev-app-cicd:$HASH_NUM
+      - docker tag 043300555595.dkr.ecr.ap-northeast-1.amazonaws.com/api-platform-dev-app-cicd:$HASH_NUM api-platform-dev-app-cicd:latest
+      - repositoryName=api-platform-dev-app
+      - REPOSITORY_URI=$(aws ecr descirbe-repositories --repository-names $repositoryName --output text --query 'repositories[0].repositoryUri')
+      - echo $REPOSITORY_URI
+      - COMMIT_HASH=$(grep -i "ST" hashnum.text | cut -c 5-)
+      - IMAGE_TAG=LOAD_${COMMIT_HASH:=latest}
+
+  build:
+    commands:
+      # Dockerfile is expected at the repository root.
+      - git config --global credential.helper "!aws codecommit credential-helper $@"
+      - git config --global credential.UseHttpPath true
+      # 再ビルドで調査する時のためにdocker buildの行をコメントアウトするだけにして残しておく
+      # 再ビルドで調査する際には、下のdocker tagをコメントアウトしてdocker buildのコメントアウトを解除する
+      - docker tag api-platform-dev-app-cicd:latest ${REPOSITORY_URI}:${IMAGE_TAG}
+      - docker build --t "${REPOSITORY_URI}:${IMAGE_TAG}" .
+
+  post_build:
+    commands:
+      - echo build completed on `date`
+      - echo pushing the Docker images...
+      - aws ecr get-login-password --region ap-northeast-1 | docker login --username AWS --password-stdin 043300555595.dkr.ecr.ap-northeast-1.amazonaws.com
+      - docker push "${REPOSITORY_URI}:${IMAGE_TAG}"
+      - echo writing image definitions file...
+      - printf '{"ImageURI":"%s"}' "${REPOSITORY_URI}:${IMAGE_TAG}" > imageDetail.json
+
+artifacts:
+  files:
+    - imageDetail.json
+    - file/taskdef.json
+    - file/appspec.yaml
