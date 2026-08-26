@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>PRD test2 API 基础设施完整清单</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  body { font-family: "Microsoft YaHei", "Noto Sans CJK SC", sans-serif; color: #1f2937; font-size: 10.5pt; line-height: 1.55; }
+  h1 { color: #123a63; font-size: 22pt; margin: 0 0 5mm; border-bottom: 2px solid #2f6f9f; padding-bottom: 3mm; }
+  h2 { color: #174f78; font-size: 15pt; margin: 7mm 0 2mm; break-after: avoid; }
+  h3 { color: #2f5f78; font-size: 11.5pt; margin: 4mm 0 1mm; break-after: avoid; }
+  p { margin: 1.5mm 0; }
+  ul, ol { margin: 1.5mm 0 2mm 6mm; padding-left: 5mm; }
+  li { margin: 0.8mm 0; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; break-inside: avoid; }
+  th, td { border: 1px solid #aab7c4; padding: 2mm; vertical-align: top; }
+  th { background: #e8f1f7; color: #173d57; text-align: left; }
+  code { font-family: Consolas, monospace; background: #eef2f5; padding: 0.2mm 1mm; border-radius: 2px; }
+  pre { font-family: Consolas, monospace; font-size: 9pt; background: #f3f6f8; border-left: 3px solid #4c88af; padding: 3mm; white-space: pre-wrap; break-inside: avoid; }
+  .note { background: #fff7dc; border-left: 4px solid #e3a008; padding: 3mm; margin: 3mm 0; }
+  .ok { background: #eaf7ef; border-left: 4px solid #27915a; padding: 3mm; margin: 3mm 0; }
+  .page-break { break-before: page; }
+  .meta { color: #64748b; font-size: 9pt; }
+</style>
+</head>
+<body>
+<h1>PRD test2 API 基础设施完整清单</h1>
+<p class="meta">区域：ap-northeast-1（东京）　账号：043300555595　架构原则：无 NAT、私网通信、AWS 服务通过 VPC Endpoint</p>
+
+<h2>1. 目标架构</h2>
+<pre>Internet / 客户端
+        │
+        ▼
+公网 NLB（443 / 10443）
+        │
+        ▼
+内部 ALB（443 / 10443）
+        │
+        ▼
+ECS Fargate（HTTP 80）
+   ├── ECR / Logs / Secrets：VPC Endpoint
+   ├── Aurora：同 VPC 私网
+   ├── Redis：同 VPC 私网
+   └── 其他 API：同 VPC 私网</pre>
+<p>不创建 NAT Gateway；ECS 私有路由表中不配置互联网默认路由。</p>
+
+<h2>2. 子网与路由</h2>
+<h3>NLB 公网子网</h3>
+<ul><li><code>zhu-prd-test2-nlb-ap-northeast-1a</code></li><li><code>zhu-prd-test2-nlb-ap-northeast-1c</code></li></ul>
+<p>要求：关联 <code>0.0.0.0/0 → Internet Gateway</code> 的公网路由表。</p>
+<h3>ALB / ECS 私有子网</h3>
+<ul><li>两个 AZ 各一个私有子网</li><li>不分配 Public IP</li><li>不配置 NAT/Internet 默认路由</li><li>关联 S3 Gateway Endpoint</li></ul>
+
+<h2>3. Load Balancer 与 Target Group</h2>
+<table><tr><th>用途</th><th>名称</th></tr>
+<tr><td>NLB → ALB 443</td><td><code>zhu-prd-test2-nlb-alb-443</code></td></tr>
+<tr><td>NLB → ALB 10443</td><td><code>zhu-prd-test2-nlb-alb-10443</code></td></tr>
+<tr><td>ALB → ECS TG 01</td><td><code>zhu-prd-test2-alb-ecs-tg-01</code></td></tr>
+<tr><td>ALB → ECS TG 02</td><td><code>zhu-prd-test2-alb-ecs-tg-02</code></td></tr></table>
+
+<h2 class="page-break">4. Security Group 规则</h2>
+<h3>NLB SG</h3>
+<table><tr><th>方向</th><th>协议/端口</th><th>来源或目标</th></tr>
+<tr><td>入站</td><td>TCP 443</td><td>允许访问系统的客户端 CIDR</td></tr>
+<tr><td>入站</td><td>TCP 10443</td><td>公司/运维出口 CIDR</td></tr>
+<tr><td>出站</td><td>TCP 443、10443</td><td>ALB SG</td></tr></table>
+<h3>ALB SG</h3>
+<table><tr><th>方向</th><th>协议/端口</th><th>来源或目标</th></tr>
+<tr><td>入站</td><td>TCP 443、10443</td><td>NLB SG</td></tr>
+<tr><td>出站</td><td>TCP 80</td><td>ECS SG</td></tr></table>
+<h3>ECS SG</h3>
+<table><tr><th>方向</th><th>协议/端口</th><th>来源或目标</th></tr>
+<tr><td>入站</td><td>TCP 80</td><td>ALB SG</td></tr>
+<tr><td>出站</td><td>TCP 443</td><td>VPC Endpoint SG</td></tr>
+<tr><td>出站</td><td>TCP 443</td><td>S3 Prefix List</td></tr>
+<tr><td>出站</td><td>TCP 5432 或 3306</td><td>Aurora SG（按引擎选择）</td></tr>
+<tr><td>出站</td><td>TCP 6379</td><td>Redis SG</td></tr>
+<tr><td>出站</td><td>实际应用端口</td><td>同 VPC 其他 API SG</td></tr></table>
+<div class="note">删除 ECS 当前的 <code>0.0.0.0/0 + all protocols</code> 全开放出站，改为按目标 SG 精确授权。</div>
+<h3>VPC Endpoint SG</h3>
+<table><tr><th>方向</th><th>协议/端口</th><th>来源</th></tr><tr><td>入站</td><td>TCP 443</td><td>ECS SG</td></tr></table>
+<h3>Aurora、Redis、其他 API SG</h3>
+<ul>
+<li>Aurora PostgreSQL：入站 TCP 5432，来源 ECS SG。</li>
+<li>Aurora MySQL：入站 TCP 3306，来源 ECS SG。</li>
+<li>Redis：入站 TCP 6379，来源 ECS SG。</li>
+<li>其他 API：入站实际应用端口，来源 test2 ECS SG。</li>
+</ul>
+
+<h2>5. VPC Endpoint</h2>
+<h3>必须的 Interface Endpoint</h3>
+<ul>
+<li><code>com.amazonaws.ap-northeast-1.ecr.api</code></li>
+<li><code>com.amazonaws.ap-northeast-1.ecr.dkr</code></li>
+<li><code>com.amazonaws.ap-northeast-1.logs</code></li>
+</ul>
+<p>放置在两个 ECS 私有子网，关联 Endpoint SG，并设置 <code>private_dns_enabled = true</code>。</p>
+<h3>必须的 Gateway Endpoint</h3>
+<ul><li><code>com.amazonaws.ap-northeast-1.s3</code>，关联 ECS 私有路由表。</li></ul>
+<h3>按需增加</h3>
+<p><code>secretsmanager</code>、<code>ssm</code>、<code>kms</code>、<code>ssmmessages</code>、<code>sts</code>、<code>sqs</code>、<code>sns</code>、<code>execute-api</code>、<code>xray</code>、<code>monitoring</code>。</p>
+
+<h2 class="page-break">6. ECR 与 ECS</h2>
+<h3>ECR Repository</h3>
+<p>创建 <code>zhu-prd-test2-api</code>，启用镜像扫描、Tag 不可变和生命周期策略。</p>
+<div class="note">当前 <code>httpd:latest</code> 来自 Docker Hub；无 NAT 环境无法拉取。必须改用 ECR，并使用 Git commit SHA 等固定版本 Tag。</div>
+<h3>Task Definition</h3>
+<ul>
+<li>使用 ECR 镜像 URI。</li><li>容器端口 80。</li><li>CloudWatch Logs。</li>
+<li>删除挂载到根目录 <code>/</code> 的空 Volume，或改到真实数据目录。</li>
+<li>通过 Secrets Manager/SSM 注入数据库、Redis 和其他 API 配置。</li>
+</ul>
+
+<h2>7. IAM</h2>
+<ul>
+<li><strong>Execution Role：</strong>ECR 拉取、CloudWatch Logs、读取 Task Definition 引用的 Secret。</li>
+<li><strong>Task Role：</strong>仅授予应用需要的 Secrets Manager、SSM、S3、SQS、SNS、KMS 等权限。</li>
+<li><strong>CodeBuild Role：</strong>ECR Push、Logs、Artifact S3、必要 KMS 权限。</li>
+<li><strong>CodePipeline Role：</strong>CodeCommit、CodeBuild、CodeDeploy、S3、PassRole。</li>
+<li><strong>CodeDeploy Role：</strong>ECS、Target Group、Listener、Task Set 操作权限。</li>
+</ul>
+
+<h2>8. 配置与密钥</h2>
+<p>Secrets Manager 保存用户名、密码、Redis Token；Parameter Store 保存 Endpoint、端口、数据库名、其他 API Base URL。禁止将密码写入 Terraform 源码。</p>
+
+<h2>9. HTTPS 与 DNS</h2>
+<ol>
+<li>准备真实域名与 Route 53 DNS。</li><li>申请状态为 <code>ISSUED</code> 的 ACM 证书。</li>
+<li>设置 <code>alb_certificate_arn</code>，将临时 HTTP 切换为 HTTPS。</li>
+<li>将包含下划线的测试 Hostname 改为合法名称，例如 <code>api-test2.prd.example.com</code>。</li>
+</ol>
+
+<h2>10. CI/CD</h2>
+<pre>Source → Build → Manual Approval → CodeDeploy Blue/Green</pre>
+<p>需要准备 <code>Dockerfile</code>、<code>buildspec.yaml</code>、<code>appspec.yaml</code>、<code>taskdef.json</code>，并增加 CodeCommit → EventBridge → CodePipeline 自动触发。</p>
+
+<h2>11. 监控</h2>
+<ul><li>ECS Running Task、CPU、Memory</li><li>ALB Healthy Host、5xx、响应时间</li>
+<li>Pipeline、Build、Deploy 失败</li><li>Aurora CPU、连接数、存储</li><li>Redis CPU、内存、连接数、Evictions</li><li>SNS/Chatbot 通知</li></ul>
+
+<h2>12. 实施顺序</h2>
+<ol>
+<li>创建 ECR 并推送业务镜像。</li><li>创建 Endpoint SG。</li>
+<li>创建 ECR API、ECR DKR、Logs、S3 Endpoint。</li><li>收紧 ECS 出站规则。</li>
+<li>增加 Aurora、Redis、其他 API 安全组规则。</li><li>修正 Task Definition。</li>
+<li>补全 CI/CD 文件并验证 Pipeline。</li><li>确认 ECS Desired 1 / Running 1、Target healthy。</li>
+<li>配置正式域名、ACM 和 HTTPS。</li><li>增加监控告警。</li>
+</ol>
+<div class="ok"><strong>完成标准：</strong>Terraform 无差异；ECS Running=1；Target healthy；Pipeline 含人工审批并可完成 Blue/Green；没有 NAT；AWS 服务走 Endpoint；数据库、Redis和其他 API 走同 VPC 私网。</div>
+</body>
+</html>

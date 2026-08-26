@@ -1,0 +1,3 @@
+# 環境固有の値を入力してから prd.tfvars として保存する。
+ecs_a_subnet_cidr        = "10.x.x.x/24"
+ecs_c_subnet_cidr        = "10.x.x.x/24"
