@@ -70,13 +70,13 @@ resource "aws_ecs_service" "prd_test2" {
   load_balancer {
     container_name   = "zhu-prd-container-test2"
     container_port   = 80
-    target_group_arn = aws_lb_target_group.tg01.arn
+    target_group_arn = var.target_group_arn
   }
 
   network_configuration {
     assign_public_ip = false
-    subnets          = [aws_subnet.ecs_a.id, aws_subnet.ecs_c.id]
-    security_groups  = [aws_security_group.ecs.id]
+    subnets          = var.subnet_ids
+    security_groups  = [var.security_group_id]
 
   }
 
@@ -87,10 +87,6 @@ resource "aws_ecs_service" "prd_test2" {
     Name = "zhu-prd-ecs-test2-service"
   }
 
-  depends_on = [
-    aws_lb_listener.alb_443,
-    aws_lb_listener_rule.prd_443,
-  ]
 }
 
 

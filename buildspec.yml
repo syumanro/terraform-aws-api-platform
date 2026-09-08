@@ -1,0 +1,26 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - aws --version
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+      - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:0:12}"
+      - IMAGE_URI="$ECR_REPOSITORY_URI:$IMAGE_TAG"
+  build:
+    commands:
+      - docker build --tag "$IMAGE_URI" .
+      - docker run --detach --name test-app --publish 8080:80 "$IMAGE_URI"
+      - sleep 2
+      - curl --fail --silent http://127.0.0.1:8080/health | grep --quiet '^OK$'
+      - docker rm --force test-app
+  post_build:
+    commands:
+      - docker push "$IMAGE_URI"
+      - printf '{"ImageURI":"%s"}' "$IMAGE_URI" > imageDetail.json
+
+artifacts:
+  files:
+    - appspec.yaml
+    - taskdef.json
+    - imageDetail.json

@@ -9,9 +9,9 @@ resource "aws_lb" "nlb" {
   name               = "zhu-prd-nlb"
   internal           = false
   load_balancer_type = "network"
-  security_groups    = [aws_security_group.nlb.id]
+  security_groups    = [var.nlb_security_group_id]
   # インターネット公開用に新規作成した 2 AZ のパブリック Subnet へ配置する。
-  subnets = [aws_subnet.nlb_a.id, aws_subnet.nlb_c.id]
+  subnets = var.nlb_subnet_ids
 
   tags = {
     Name = "zhu-prd-nlb"
@@ -138,9 +138,9 @@ resource "aws_lb" "alb" {
   name               = "zhu-prd-alb"
   internal           = true
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
+  security_groups    = [var.alb_security_group_id]
   # ALB は複数 AZ に配置する必要があるため、作成した ECS 用サブネットを指定する。
-  subnets                    = [aws_subnet.ecs_a.id, aws_subnet.ecs_c.id]
+  subnets                    = var.ecs_subnet_ids
   drop_invalid_header_fields = true
 
   tags = {

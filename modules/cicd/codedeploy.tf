@@ -37,27 +37,27 @@ resource "aws_codedeploy_deployment_group" "prd_test2" {
 
   # デプロイ対象の ECS Cluster と ECS Service。
   ecs_service {
-    cluster_name = aws_ecs_cluster.prd_test2.name
-    service_name = aws_ecs_service.prd_test2.name
+    cluster_name = var.ecs_cluster_name
+    service_name = var.ecs_service_name
   }
 
   # 443 は本番トラフィック、10443 は新バージョン確認用のテストトラフィック。
   load_balancer_info {
     target_group_pair_info {
       prod_traffic_route {
-        listener_arns = [aws_lb_listener.alb_443.arn]
+        listener_arns = [var.production_listener_arn]
       }
 
       test_traffic_route {
-        listener_arns = [aws_lb_listener.alb_10443.arn]
+        listener_arns = [var.test_listener_arn]
       }
 
       target_group {
-        name = aws_lb_target_group.tg01.name
+        name = var.production_target_group_name
       }
 
       target_group {
-        name = aws_lb_target_group.tg02.name
+        name = var.test_target_group_name
       }
     }
   }

@@ -23,3 +23,22 @@ variable "alb_certificate_arn" {
   default     = null
   nullable    = true
 }
+
+variable "github_repository" {
+  description = "CodePipeline が取得する GitHub リポジトリ。owner/repository 形式で指定する。"
+  type        = string
+  default     = "syumanro/terraform-aws-api-platform"
+}
+
+variable "github_branch" {
+  description = "CodePipeline が監視する GitHub ブランチ。"
+  type        = string
+  default     = "main"
+}
+
+variable "github_connection_arn" {
+  description = "既存の AWS CodeConnections ARN。null の場合は新しい接続を作成する。"
+  type        = string
+  default     = null
+  nullable    = true
+}

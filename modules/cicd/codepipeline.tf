@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # CodePipeline
-# CodeCommit → CodeBuild → CodeDeploy (ECS Blue/Green) のデリバリーパイプライン。
+# GitHub → CodeBuild → CodeDeploy (ECS Blue/Green) のデリバリーパイプライン。
 # -----------------------------------------------------------------------------
 
 # Pipeline が Source / Build 成果物を一時保存する専用 S3 Bucket。
@@ -64,16 +64,17 @@ resource "aws_codepipeline" "prd_test2" {
       output_artifacts = ["SourceOutput"]
       category         = "Source"
       owner            = "AWS"
-      provider         = "CodeCommit"
+      provider         = "CodeStarSourceConnection"
       region           = "ap-northeast-1"
       run_order        = 1
       version          = "1"
 
       configuration = {
-        BranchName           = "main"
-        OutputArtifactFormat = "Code_ZIP"
-        PollForSourceChanges = "false"
-        RepositoryName       = aws_codecommit_repository.prd_test2.repository_name
+        BranchName           = var.github_branch
+        ConnectionArn        = local.github_connection_arn
+        DetectChanges        = "true"
+        FullRepositoryId     = var.github_repository
+        OutputArtifactFormat = "CODE_ZIP"
       }
     }
   }

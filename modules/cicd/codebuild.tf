@@ -26,6 +26,16 @@ resource "aws_codebuild_project" "prd_test2" {
     privileged_mode             = true
     image_pull_credentials_type = "CODEBUILD"
 
+    environment_variable {
+      name  = "ECR_REPOSITORY_URI"
+      value = var.ecr_repository_uri
+    }
+
+    environment_variable {
+      name  = "ECR_REGISTRY"
+      value = "${var.ecr_registry_id}.dkr.ecr.ap-northeast-1.amazonaws.com"
+    }
+
   }
 
   logs_config {
