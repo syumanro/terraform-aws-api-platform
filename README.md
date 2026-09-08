@@ -23,69 +23,10 @@ Amazon ECS Fargate
 
 ## システム設計図
 
-```mermaid
-flowchart TB
-  Developer["開発者"] -->|git push| GitHub["GitHub<br/>ソースコード"]
+![AWS API Platform システム設計図](docs/architecture.png)
 
-  subgraph CICD["CI/CD"]
-    Connection["AWS CodeConnections"]
-    Pipeline["CodePipeline"]
-    Build["CodeBuild<br/>Build・Test・Push"]
-    Artifact["S3<br/>Pipeline Artifact"]
-    Deploy["CodeDeploy<br/>ECS Blue/Green"]
-  end
-
-  GitHub --> Connection --> Pipeline
-  Pipeline --> Build
-  Pipeline <--> Artifact
-  Build -->|Docker image| ECR["Amazon ECR"]
-  Pipeline -->|Manual Approval| Deploy
-  ECR -->|Image| Deploy
-
-  User["利用者"] -->|HTTPS :443 / :10443| NLB
-
-  subgraph AWS["AWS / ap-northeast-1"]
-    subgraph VPC["VPC"]
-      IGW["Internet Gateway"]
-
-      subgraph Public["Public Subnet / 2AZ"]
-        NLB["Network Load Balancer<br/>TCP 443・10443"]
-      end
-
-      subgraph Private["Private ECS Subnet / 2AZ"]
-        ALB["Internal Application Load Balancer<br/>443・10443"]
-        TGBlue["Target Group<br/>Blue"]
-        TGGreen["Target Group<br/>Green"]
-        ECS["ECS Service<br/>Fargate Tasks"]
-        CloudMap["AWS Cloud Map<br/>Private DNS"]
-      end
-    end
-
-    Logs["CloudWatch Logs"]
-    Scaling["Application Auto Scaling"]
-  end
-
-  IGW --> NLB
-  NLB -->|TCP passthrough| ALB
-  ALB -->|Production traffic| TGBlue
-  ALB -->|Test traffic| TGGreen
-  TGBlue --> ECS
-  TGGreen --> ECS
-  Deploy -->|Task Definition・Traffic切替| ECS
-  ECS -->|Pull| ECR
-  ECS --> Logs
-  ECS --> CloudMap
-  Scaling -->|Desired count| ECS
-
-  classDef source fill:#24292f,color:#fff,stroke:#57606a
-  classDef delivery fill:#fff3cd,color:#473b13,stroke:#d6ad27
-  classDef network fill:#e8f3ff,color:#163b63,stroke:#5596d0
-  classDef compute fill:#e9f8ef,color:#174b2c,stroke:#52a970
-  class GitHub source
-  class Connection,Pipeline,Build,Artifact,Deploy,ECR delivery
-  class IGW,NLB,ALB,TGBlue,TGGreen network
-  class ECS,CloudMap,Logs,Scaling compute
-```
+この図では、[AWS公式のArchitecture Icons](https://aws.amazon.com/architecture/icons/)
+を使用しています。
 
 通信経路は `Internet → NLB → Internal ALB → ECS` に限定しています。
 CodeDeployは2つのTarget Groupを使い、新しいタスクをテスト用ポートで確認してから
