@@ -40,6 +40,26 @@ resource "aws_s3_bucket_public_access_block" "cicd_artifacts" {
 }
 
 # Delivery pipeline
+resource "aws_s3_bucket_lifecycle_configuration" "cicd_artifacts" {
+  bucket     = aws_s3_bucket.cicd_artifacts.id
+  depends_on = [aws_s3_bucket_versioning.cicd_artifacts]
+
+  rule {
+    id     = "expire-build-artifacts"
+    status = "Enabled"
+    filter {}
+    expiration {
+      days = 30
+    }
+    noncurrent_version_expiration {
+      noncurrent_days = 7
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+}
+
 resource "aws_codepipeline" "prd_test2" {
 
   execution_mode = "SUPERSEDED"

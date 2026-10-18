@@ -1,54 +1,13 @@
 # Scaling target
 resource "aws_appautoscaling_target" "prd_test2" {
-  max_capacity       = 12
+  max_capacity       = 2
   min_capacity       = 1
   resource_id        = "service/${var.cluster_name}/${var.service_name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
-  lifecycle {
-    ignore_changes = [max_capacity]
-  }
 }
 
-# CPU scaling
-resource "aws_cloudwatch_metric_alarm" "cpu_prd_test2" {
-  alarm_name          = "${var.service_name}-cpu-utilization-upper-limit-alarm"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/ECS"
-  period              = 60
-  statistic           = "Average"
-  threshold           = "70"
-  dimensions = {
-    ClusterName = var.cluster_name
-    ServiceName = var.service_name
-  }
-  alarm_actions = [aws_appautoscaling_policy.cpu_step_prd_test2.arn]
-}
-
-resource "aws_appautoscaling_policy" "cpu_step_prd_test2" {
-  name               = "${var.service_name}-cpu-utilization-step-scaling-policy"
-  policy_type        = "StepScaling"
-  resource_id        = aws_appautoscaling_target.prd_test2.resource_id
-  scalable_dimension = aws_appautoscaling_target.prd_test2.scalable_dimension
-  service_namespace  = aws_appautoscaling_target.prd_test2.service_namespace
-  step_scaling_policy_configuration {
-    adjustment_type         = "PercentChangeInCapacity"
-    cooldown                = 300
-    metric_aggregation_type = "Average"
-    step_adjustment {
-      metric_interval_lower_bound = 0
-      metric_interval_upper_bound = 10
-      scaling_adjustment          = 20
-    }
-    step_adjustment {
-      metric_interval_lower_bound = 10
-      scaling_adjustment          = 30
-    }
-  }
-}
-
+# CPU target tracking
 resource "aws_appautoscaling_policy" "cpu_target_prd_test2" {
   name               = "${var.service_name}-cpu-utilization-target-scaling-policy"
   policy_type        = "TargetTrackingScaling"
@@ -66,45 +25,7 @@ resource "aws_appautoscaling_policy" "cpu_target_prd_test2" {
   }
 }
 
-# Memory scaling
-resource "aws_cloudwatch_metric_alarm" "memory_prd_test2" {
-  alarm_name          = "${var.service_name}-memory-utilization-upper-limit-alarm"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "MemoryUtilization"
-  namespace           = "AWS/ECS"
-  period              = 60
-  statistic           = "Average"
-  threshold           = "70"
-  dimensions = {
-    ClusterName = var.cluster_name
-    ServiceName = var.service_name
-  }
-  alarm_actions = [aws_appautoscaling_policy.memory_step_prd_test2.arn]
-}
-
-resource "aws_appautoscaling_policy" "memory_step_prd_test2" {
-  name               = "${var.service_name}-memory-utilization-step-scaling-policy"
-  policy_type        = "StepScaling"
-  resource_id        = aws_appautoscaling_target.prd_test2.resource_id
-  scalable_dimension = aws_appautoscaling_target.prd_test2.scalable_dimension
-  service_namespace  = aws_appautoscaling_target.prd_test2.service_namespace
-  step_scaling_policy_configuration {
-    adjustment_type         = "PercentChangeInCapacity"
-    cooldown                = 300
-    metric_aggregation_type = "Average"
-    step_adjustment {
-      metric_interval_lower_bound = 0
-      metric_interval_upper_bound = 10
-      scaling_adjustment          = 20
-    }
-    step_adjustment {
-      metric_interval_lower_bound = 10
-      scaling_adjustment          = 30
-    }
-  }
-}
-
+# Memory target tracking
 resource "aws_appautoscaling_policy" "memory_target_prd_test2" {
   name               = "${var.service_name}-memory-utilization-target-scaling-policy"
   policy_type        = "TargetTrackingScaling"

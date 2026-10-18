@@ -8,6 +8,8 @@ resource "aws_codebuild_project" "prd_test2" {
   project_visibility = "PRIVATE"
   queued_timeout     = 480
 
+  depends_on = [aws_cloudwatch_log_group.codebuild_test2]
+
   service_role = "arn:aws:iam::043300555595:role/zhu-prd-codebuild-role"
 
   artifacts {
@@ -71,7 +73,7 @@ resource "aws_cloudwatch_log_group" "codebuild_test2" {
   log_group_class = "STANDARD"
   name            = "/ecs/codebuild/zhu-prd-test2-api"
 
-  retention_in_days = 1827
+  retention_in_days = 7
 
   skip_destroy = false
 }

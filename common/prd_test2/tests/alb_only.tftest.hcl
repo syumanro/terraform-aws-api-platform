@@ -19,6 +19,30 @@ mock_provider "aws" {
   }
 }
 
+run "learning_ecs_egress_and_costs" {
+  command = plan
+
+  module {
+    source = "../../modules/ecs"
+  }
+
+  variables {
+    vpc_id            = "vpc-0123456789abcdef0"
+    subnet_ids        = ["subnet-0123456789abcdef0", "subnet-0123456789abcdef1"]
+    security_group_id = "sg-0123456789abcdef0"
+    target_group_arn  = "arn:aws:elasticloadbalancing:ap-northeast-1:123456789012:targetgroup/test-target/0123456789abcdef"
+  }
+
+  assert {
+    condition = (
+      one(aws_ecs_service.prd_test2.network_configuration).assign_public_ip &&
+      one(aws_ecs_cluster.prd_test2.setting).value == "disabled" &&
+      aws_cloudwatch_log_group.ecs_test2.retention_in_days == 7
+    )
+    error_message = "Learning tasks need public IP egress, disabled Container Insights and seven-day logs."
+  }
+}
+
 run "public_and_private_networks" {
   command = apply
 
@@ -45,14 +69,16 @@ run "public_and_private_networks" {
     condition = (
       length(aws_route_table.public.route) == 1 &&
       one(aws_route_table.public.route).cidr_block == "0.0.0.0/0" &&
-      length(aws_route_table.ecs_private.route) == 0 &&
+      length(aws_route_table.ecs_private.route) == 1 &&
+      one(aws_route_table.ecs_private.route).gateway_id == aws_internet_gateway.main.id &&
+      one(aws_route_table.ecs_private.route).cidr_block == "0.0.0.0/0" &&
       one(aws_route_table.public.route).gateway_id == aws_internet_gateway.main.id &&
       aws_route_table_association.public_a.route_table_id == aws_route_table.public.id &&
       aws_route_table_association.public_c.route_table_id == aws_route_table.public.id &&
       !aws_subnet.ecs_a.map_public_ip_on_launch &&
       !aws_subnet.ecs_c.map_public_ip_on_launch
     )
-    error_message = "The ALB needs public routing while ECS subnets must remain private."
+    error_message = "ALB and learning-mode ECS subnets need Internet Gateway routes."
   }
 }
 

@@ -32,7 +32,7 @@ Amazon ECS Fargate
 この図では、[AWS公式のArchitecture Icons](https://aws.amazon.com/architecture/icons/)
 を使用しています。
 
-通信経路は `Internet → Public ALB → Private ECS` に限定しています。
+通信経路は `Internet → Public ALB → ECS（Public IP、ALB SG のみ許可）` に限定しています。
 CodeDeployは2つのTarget Groupを使い、新しいタスクをテスト用ポートで確認してから
 本番トラフィックを切り替えます。
 
@@ -63,7 +63,7 @@ ALB の接続先は `terraform output -raw alb_dns_name` で確認します。
 │   ├── network/                 # Subnet、Route Table、Internet Gateway
 │   ├── security_groups/         # ALB、ECSの通信制御
 │   ├── load_balancing/          # Public ALB、Listener、Target Group
-│   ├── ecs/                     # Cluster、Service、Task Definition、Cloud Map
+│   ├── ecs/                     # Cluster、Service、Task Definition、Logs
 │   ├── autoscaling/             # ECS Auto ScalingとCloudWatch Alarm
 │   ├── ecr/                     # ECR RepositoryとLifecycle Policy
 │   └── cicd/                    # GitHub、CodeBuild、CodeDeploy、CodePipeline
@@ -130,3 +130,11 @@ terraform apply -var-file=prd.tfvars
 > 既に旧構成をTerraform stateで管理している場合は、モジュール化後のアドレスへ
 > stateを移行してからapplyしてください。移行せずにapplyすると、既存リソースが
 > 削除・再作成される可能性があります。
+
+## 学习环境成本设置
+
+ECS 任务使用公网 IP 和 Internet Gateway 出网，应用端口只接受 ALB 安全组流量。不创建 NAT Gateway、VPC Endpoint 或 Cloud Map。公网 IPv4、ALB、Fargate 仍会计费；旧架构图中的 Private ECS 不再代表当前网络设置。
+
+Container Insights 关闭；ECS 和 CodeBuild 日志保留 7 天；任务数范围 1–2，仅保留 CPU/内存 Target Tracking。蓝绿部署自动切流量，旧任务保留 5 分钟，流水线的部署前人工审批保留。S3 制品保留 30 天、历史版本保留 7 天，过期制品不能用于重跑旧流水线。
+
+部署仍依赖已有 IAM Roles、VPC 和完成授权的 GitHub Connection。首次部署前重新生成 plan，不要使用旧 tfplan。

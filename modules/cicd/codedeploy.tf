@@ -8,7 +8,7 @@ resource "aws_codedeploy_app" "prd_test2" {
 # Deployment group
 resource "aws_codedeploy_deployment_group" "prd_test2" {
 
-  app_name               = "AppECS-zhu-prd-ecs-test2-zhu-prd-ecsservice-test2"
+  app_name               = aws_codedeploy_app.prd_test2.name
   deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
   deployment_group_name  = "DgpECS-zhu-prd-ecs-test2-zhu-prd-ecsservice-test2"
 
@@ -26,15 +26,15 @@ resource "aws_codedeploy_deployment_group" "prd_test2" {
 
     deployment_ready_option {
 
-      action_on_timeout    = "STOP_DEPLOYMENT"
-      wait_time_in_minutes = 2800
+      action_on_timeout    = "CONTINUE_DEPLOYMENT"
+      wait_time_in_minutes = 0
     }
 
     terminate_blue_instances_on_deployment_success {
 
       action = "TERMINATE"
 
-      termination_wait_time_in_minutes = 2800
+      termination_wait_time_in_minutes = 5
     }
   }
 

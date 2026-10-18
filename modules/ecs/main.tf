@@ -17,7 +17,7 @@ resource "aws_ecs_cluster" "prd_test2" {
 
     name = "containerInsights"
 
-    value = "enabled"
+    value = "disabled"
 
   }
 
@@ -67,6 +67,8 @@ resource "aws_ecs_service" "prd_test2" {
 
   task_definition = aws_ecs_task_definition.prd_test2.arn
 
+  depends_on = [aws_cloudwatch_log_group.ecs_test2]
+
   deployment_controller {
 
     type = "CODE_DEPLOY"
@@ -103,7 +105,7 @@ resource "aws_ecs_service" "prd_test2" {
 
   network_configuration {
 
-    assign_public_ip = false
+    assign_public_ip = true
 
     subnets = var.subnet_ids
 
@@ -111,11 +113,6 @@ resource "aws_ecs_service" "prd_test2" {
 
   }
 
-  service_registries {
-
-    registry_arn = aws_service_discovery_service.test2.arn
-
-  }
 
   tags = {
 
@@ -156,15 +153,6 @@ resource "aws_ecs_task_definition" "prd_test2" {
 
     memoryReservation = 512
 
-    mountPoints = [{
-
-      containerPath = "/"
-
-      readOnly = false
-
-      sourceVolume = "zhu-prd-test2-volume"
-
-    }]
 
     name = "zhu-prd-container-test2"
 
@@ -204,11 +192,6 @@ resource "aws_ecs_task_definition" "prd_test2" {
 
   }
 
-  volume {
-
-    name = "zhu-prd-test2-volume"
-
-  }
 
   tags = {
 
@@ -225,62 +208,11 @@ resource "aws_cloudwatch_log_group" "ecs_test2" {
 
   name = "/ecs/zhu-prd-ecs-test2"
 
-  retention_in_days = 1827
+  retention_in_days = 7
 
   tags = {
 
     Name = "zhu-prd-ecs-test2-logs"
-
-  }
-
-}
-
-# Service discovery
-resource "aws_service_discovery_private_dns_namespace" "test2" {
-
-  name = "zhu-prd.local"
-
-  description = "Private DNS namespace for zhu-prd ECS services"
-
-  vpc = var.vpc_id
-
-  tags = {
-
-    Name = "zhu-prd-service-discovery"
-
-  }
-
-}
-
-resource "aws_service_discovery_service" "test2" {
-
-  name = "test2"
-
-  dns_config {
-
-    namespace_id = aws_service_discovery_private_dns_namespace.test2.id
-
-    routing_policy = "MULTIVALUE"
-
-    dns_records {
-
-      ttl = 60
-
-      type = "A"
-
-    }
-
-  }
-
-  health_check_custom_config {
-
-    failure_threshold = 1
-
-  }
-
-  tags = {
-
-    Name = "zhu-prd-ecsservice-test2"
 
   }
 

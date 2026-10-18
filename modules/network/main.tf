@@ -52,7 +52,7 @@ resource "aws_route_table_association" "public_c" {
   route_table_id = aws_route_table.public.id
 }
 
-# Private subnets
+# ECS subnets: learning mode uses public IPs and avoids NAT Gateway costs.
 resource "aws_subnet" "ecs_a" {
   vpc_id                  = var.vpc_id
   cidr_block              = var.ecs_a_subnet_cidr
@@ -75,9 +75,13 @@ resource "aws_subnet" "ecs_c" {
   }
 }
 
-# Private routing
+# ECS outbound routing
 resource "aws_route_table" "ecs_private" {
   vpc_id = var.vpc_id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
+  }
   tags = {
     Name = "zhu-prd-test2-ecs-private-rt"
     Tier = "ecs"
