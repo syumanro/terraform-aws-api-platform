@@ -1,9 +1,13 @@
 version: 0.0
+
+# ECS の Blue/Green デプロイ設定。
 Resources:
   - TargetService:
       Type: AWS::ECS::Service
       Properties:
+        # CodePipeline が新しいタスク定義の ARN に置き換える。
         TaskDefinition: <TASK_DEFINITION>
+        # コンテナ名とポートはタスク定義に合わせる。
         LoadBalancerInfo:
           ContainerName: zhu-prd-container-test2
           ContainerPort: 80

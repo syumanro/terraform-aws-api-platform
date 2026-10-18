@@ -4,6 +4,7 @@ env:
   shell: bash
 
 phases:
+  # ECR にログインし、コミット ID を使ってイメージタグを設定する。
   pre_build:
     commands:
       - aws --version
@@ -11,10 +12,12 @@ phases:
       - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:0:12}"
       - IMAGE_URI="$ECR_REPOSITORY_URI:$IMAGE_TAG"
 
+  # イメージをビルドし、公開前に HTTP ヘルスチェックを実行する。
   build:
     commands:
       - docker build --tag "$IMAGE_URI" .
       - docker run --detach --name test-app --publish 8080:80 "$IMAGE_URI"
+      # コンテナの起動を待って再試行し、応答に OK の行がなければ失敗とする。
       - |
         set -o pipefail
         for i in {1..10}; do
@@ -28,17 +31,21 @@ phases:
           fi
           sleep 2
         done
+      # 成功マーカーを作成し、post_build でテスト通過を確認する。
       - touch /tmp/health-check-passed
 
+    # ビルドやヘルスチェックが失敗した場合もテストコンテナを削除する。
     finally:
       - docker rm --force test-app || true
 
+  # テスト成功後にイメージを push し、デプロイ用のイメージ URI を出力する。
   post_build:
     commands:
       - test -f /tmp/health-check-passed
       - docker push "$IMAGE_URI"
       - printf '{"ImageURI":"%s"}' "$IMAGE_URI" > imageDetail.json
 
+# デプロイ用テンプレートとイメージ情報を CodePipeline に渡す。
 artifacts:
   files:
     - appspec.yaml

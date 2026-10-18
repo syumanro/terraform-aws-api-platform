@@ -1,53 +1,63 @@
-# -----------------------------------------------------------------------------
-# CodeBuild
-# ソースをビルドし、イメージを ECR へ push してデプロイ用アーティファクトを出力する。
-# -----------------------------------------------------------------------------
-# Docker イメージをビルドして ECR へ push し、CodeDeploy 用成果物を生成する。
+# Build project
 resource "aws_codebuild_project" "prd_test2" {
-  badge_enabled      = false
+
+  badge_enabled = false
+
   build_timeout      = 60
   name               = "zhu-prd-test2-api-project"
   project_visibility = "PRIVATE"
   queued_timeout     = 480
-  # 既存の CodeBuild Service Role を使用する。
+
   service_role = "arn:aws:iam::043300555595:role/zhu-prd-codebuild-role"
 
   artifacts {
-    name                = "zhu-prd-test2-api-project"
-    type                = "CODEPIPELINE"
+
+    name = "zhu-prd-test2-api-project"
+
+    type = "CODEPIPELINE"
+
     encryption_disabled = false
-    packaging           = "NONE"
+
+    packaging = "NONE"
   }
 
   environment {
-    compute_type                = "BUILD_GENERAL1_SMALL"
-    image                       = "aws/codebuild/standard:7.0"
-    type                        = "LINUX_CONTAINER"
-    privileged_mode             = true
+
+    compute_type = "BUILD_GENERAL1_SMALL"
+
+    image = "aws/codebuild/standard:7.0"
+
+    type = "LINUX_CONTAINER"
+
+    privileged_mode = true
+
     image_pull_credentials_type = "CODEBUILD"
 
     environment_variable {
       name  = "ECR_REPOSITORY_URI"
       value = var.ecr_repository_uri
     }
-
     environment_variable {
       name  = "ECR_REGISTRY"
       value = "${var.ecr_registry_id}.dkr.ecr.ap-northeast-1.amazonaws.com"
     }
-
   }
 
   logs_config {
+
     cloudwatch_logs {
+
       group_name = "/ecs/codebuild/zhu-prd-test2-api"
-      status     = "ENABLED"
+
+      status = "ENABLED"
     }
   }
 
   source {
+
     git_clone_depth = 0
-    type            = "CODEPIPELINE"
+
+    type = "CODEPIPELINE"
   }
 
   tags = {
@@ -55,11 +65,13 @@ resource "aws_codebuild_project" "prd_test2" {
   }
 }
 
-
-# ビルド失敗の原因を確認できるよう CodeBuild のログを保持する。
+# Build logs
 resource "aws_cloudwatch_log_group" "codebuild_test2" {
-  log_group_class   = "STANDARD"
-  name              = "/ecs/codebuild/zhu-prd-test2-api"
+
+  log_group_class = "STANDARD"
+  name            = "/ecs/codebuild/zhu-prd-test2-api"
+
   retention_in_days = 1827
-  skip_destroy      = false
+
+  skip_destroy = false
 }

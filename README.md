@@ -1,5 +1,9 @@
 # Terraform AWS API Platform
 
+中文学习资料：[学习入口与阅读顺序](docs/learning-guide.md) · [构建部署配置逐行说明](docs/deployment-line-by-line.md)。Terraform 注释使用 HashiCorp 推荐的简单 `#` 写法，详细学习说明保留在文档中。
+
+日本語学習資料：[学習ガイドと読む順序](docs/learning-guide.ja.md) · [ビルド・デプロイ設定の行別解説](docs/deployment-line-by-line.ja.md)。Terraform のコメントは HashiCorp が推奨するシンプルな `#` 形式を使用しています。詳しい学習説明はドキュメントに残しています。
+
 Terraformで構築する、AWS上のコンテナアプリケーション基盤です。
 
 GitHubへのpushを起点にDockerイメージをビルドしてECRへ保存し、
@@ -28,14 +32,17 @@ Amazon ECS Fargate
 この図では、[AWS公式のArchitecture Icons](https://aws.amazon.com/architecture/icons/)
 を使用しています。
 
-通信経路は `Internet → NLB → Internal ALB → ECS` に限定しています。
+通信経路は `Internet → Public ALB → Private ECS` に限定しています。
 CodeDeployは2つのTarget Groupを使い、新しいタスクをテスト用ポートで確認してから
 本番トラフィックを切り替えます。
+
+ALB の接続先は `terraform output -raw alb_dns_name` で確認します。
+証明書が未設定の場合は `http://<ALB DNS>:443`、テスト入口は `http://<ALB DNS>:10443` です。
+既存環境からの変更点と移行手順は [ALB-only migration](docs/alb-migration.md) を参照してください。
 
 ## 主なAWSサービス
 
 - VPC、Subnet、Security Group
-- Network Load Balancer
 - Application Load Balancer
 - Amazon ECS Fargate
 - Amazon ECR
@@ -54,8 +61,8 @@ CodeDeployは2つのTarget Groupを使い、新しいタスクをテスト用ポ
 ├── common/prd_test2/            # PRD環境のルートモジュール
 ├── modules/
 │   ├── network/                 # Subnet、Route Table、Internet Gateway
-│   ├── security_groups/         # NLB、ALB、ECSの通信制御
-│   ├── load_balancing/          # NLB、ALB、Listener、Target Group
+│   ├── security_groups/         # ALB、ECSの通信制御
+│   ├── load_balancing/          # Public ALB、Listener、Target Group
 │   ├── ecs/                     # Cluster、Service、Task Definition、Cloud Map
 │   ├── autoscaling/             # ECS Auto ScalingとCloudWatch Alarm
 │   ├── ecr/                     # ECR RepositoryとLifecycle Policy
